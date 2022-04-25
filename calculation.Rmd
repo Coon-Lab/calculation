@@ -1,0 +1,184 @@
+---
+title: "Calculation"
+author: "Tingying lu"
+date: "4/1/2022"
+output: html_document
+fig_width: 10
+fig_height: 4
+---
+
+```{r cars}
+library(nycflights13)
+library(tidyverse)
+library("readxl")
+
+library(hrbrthemes)
+library(viridis)
+library(plotly)
+```
+
+
+Read excel
+```{r cars}
+M=read_excel("rawdata1.xlsx")
+```
+
+```{r cars}
+M=tibble(M)
+M=M[!is.na(M$mouse),]
+```
+
+See how many gene we have.
+```{r cars}
+unique(M$gene)
+```
+
+
+change raw data format
+```{r cars}
+M1=group_by(M,mouse,gene)
+
+M2= summarise( M1,m=mean(dCt))
+M2
+```
+
+```{r cars}
+M3=pivot_wider(M2, names_from = gene, values_from = m) 
+
+```
+
+```{r cars}
+colnames(M3)
+#M4.1=M3[, c('A', 'B', 'Cost')]
+
+```
+See all mouse
+
+```{r cars}
+M3$mouse
+
+```
+
+
+Choose a mouse to do normalization. Here we choose 135L
+
+```{r cars}
+
+M41=M3[, c("ACTB",    "ASMA",    "COL-1",   "TNFA",    "CSF1",    "IL6",    
+ "PDGFA",   "VEGFA",   "AR",      "ARG1",    "CD4",     "COL-3A1", "CXCL1" , 
+"F480",    "FN1",     "FOXP3",   "HPRT",    "MIF",     "NOS2",    "TGFB1",  
+"YWHAZ" ,  "EEF1A1",  "RPL13A",  "CD3",     "IFNG" ,   "MMP13",   "EEF2",   
+"EGF"  ,   "EMR1" ,   "FGF1",    "IGF1" ,   "KI67",    "PDGFa")]
+M42=filter(M3,mouse=='135L')[, c("ACTB",    "ASMA",    "COL-1",   "TNFA",    "CSF1",    "IL6",    
+ "PDGFA",   "VEGFA",   "AR",      "ARG1",    "CD4",     "COL-3A1", "CXCL1" , 
+"F480",    "FN1",     "FOXP3",   "HPRT",    "MIF",     "NOS2",    "TGFB1",  
+"YWHAZ" ,  "EEF1A1",  "RPL13A",  "CD3",     "IFNG" ,   "MMP13",   "EEF2",   
+"EGF"  ,   "EMR1" ,   "FGF1",    "IGF1" ,   "KI67",    "PDGFa")]
+M41
+M42
+
+```
+
+
+
+normalization part
+
+```{r cars}
+m41=as.matrix(M41)
+m42=as.matrix(M42)
+```
+
+
+```{r cars}
+M4=sweep(m41, 2,m42)
+```
+
+
+fold change
+```{r cars}
+M5=2**(-M4)
+```
+
+```{r cars}
+M6=as.data.frame(M5)
+```
+
+```{r cars}
+colnames(M6)
+```
+```{r cars}
+M6['mouse']=M3['mouse']
+```
+
+
+
+```{r cars}
+M6['mouse']=M3['mouse']
+M6['group']=0
+M6=M6[!is.na(M6$mouse),]
+```
+
+
+```{r cars}
+MG=M[, c('mouse', 'group')]
+MG=unique(MG)
+
+```
+
+
+```{r cars}
+sort(MG$mouse,index.return=TRUE)
+sort(M6$mouse,index.return=TRUE)
+
+MG= MG[sort(MG$mouse,index.return=TRUE)$ix,]
+M6=M6[sort(M6$mouse,index.return=TRUE)$ix,]
+
+
+```
+
+
+
+
+```{r cars}
+M6$group=ifelse(M6$mouse==MG$mouse,MG$group,M6$group)
+```
+
+
+
+visualization part Here we choose ('TNFA','VEGFA','TGFB1','MIF','CXCL1','IFNG','IL6','COL-1','COL-3A1','ASMA','FN1','F480','ARG1','NOS2','FOXP3','CD4','AR' ) those genes to do visualization
+```{r cars}
+M_graph=M6[, c('mouse','group','TNFA','VEGFA','TGFB1','MIF','CXCL1','IFNG','IL6','COL-1','COL-3A1','ASMA','FN1','F480','ARG1','NOS2','FOXP3','CD4','AR')]
+
+M_graph=M_graph[complete.cases(M_graph),]
+```
+
+change data format for visualization.
+```{r cars}
+M_graph=pivot_longer(M_graph,cols = c('TNFA','VEGFA','TGFB1','MIF','CXCL1','IFNG','IL6','COL-1','COL-3A1','ASMA','FN1','F480','ARG1','NOS2','FOXP3','CD4','AR'),names_to = "gene",values_to = "value")
+```
+
+```{r cars}
+
+M_graph %>%
+  ggplot( aes(x=gene, y=value, fill=group)) +
+    geom_boxplot(outlier.shape = NA) +
+    geom_jitter(color="black", size=0.4, alpha=0.9) +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6)+
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    xlab("")+scale_y_continuous(trans='log10')+
+    theme_grey(base_size = 10)
+
+```
+
+
+
+
+
+
+
+
+
